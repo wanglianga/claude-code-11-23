@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: irrigation-db
+    environment:
+      POSTGRES_USER: ccdev
+      POSTGRES_PASSWORD: ccdev
+      POSTGRES_DB: irrigation
+    ports:
+      - "5432:5432"
+    volumes:
+      - irrigation_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccdev -d irrigation"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: irrigation-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      IRR_DATABASE_URL: postgresql+psycopg2://ccdev:ccdev@db:5432/irrigation
+      IRR_SEED: "true"
+      IRR_STABILITY_MINUTES: "30"
+      IRR_ALLOWED_LATENESS_MINUTES: "15"
+      IRR_CLOCK_DRIFT_MINUTES: "30"
+      IRR_IMBALANCE_TOLERANCE_RATIO: "0.05"
+    ports:
+      - "8000:8000"
+
+volumes:
+  irrigation_pgdata:
